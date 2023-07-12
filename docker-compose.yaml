@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  nginx:
+    depends_on:
+      - server
+    image: nginx:latest
+    container_name: production_nginx
+    volumes:
+      - ./nginx/config/reverse_proxy.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    ports:
+      - 1443:443
+  db:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - '5432'
+    volumes: 
+      - db:/var/lib/postgresql/data
+      - ./db/create-db.sql:/docker-entrypoint-initdb.d/create_database.sql
+  server:
+    depends_on:
+      - db
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "9000"
+volumes:
+  db:
+    driver: local

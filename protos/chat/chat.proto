@@ -1,0 +1,75 @@
+syntax = "proto3";
+package chat;
+
+option go_package = "github.com/RGood/server/internal/generated/chat";
+
+import "google/protobuf/timestamp.proto";
+
+message Message {
+  string author = 1;
+  string target = 2;
+  google.protobuf.Timestamp time = 3;
+  string data = 4;
+}
+
+message ErrorResponse {
+  string target = 2;
+  Event event = 3;
+}
+
+message Event {
+  oneof event {
+    Message message = 1;
+    ErrorResponse error = 2;
+  }
+}
+
+message Credentials {
+  string username = 1;
+  string password = 2;
+}
+
+message AuthResponse {
+  string token = 1;
+}
+
+message WhoamiRequest {}
+
+message User {
+  string name = 1;
+  string description = 2;
+}
+
+message Space {
+  string name = 1;
+  string description = 2;
+}
+
+message FindSpacesRequest {
+  string address = 1;
+  uint64 limit = 2;
+  uint64 page = 3;
+}
+
+message FindSpacesResponse {
+  repeated Space spaces = 1;
+}
+
+message FindUsersRequest {
+  string address = 1;
+  uint64 limit = 2;
+  uint64 page = 3;
+}
+
+message FindUsersResponse {
+  repeated User users = 1;
+}
+
+service RChat {
+  rpc Signup(Credentials) returns (AuthResponse);
+  rpc Login(Credentials) returns (AuthResponse);
+  rpc Whoami(WhoamiRequest) returns (User);
+  rpc Open(stream Event) returns(stream Event);
+  rpc FindSpaces(FindSpacesRequest) returns (FindSpacesResponse);
+  rpc FindUsers(FindUsersRequest) returns (FindUsersResponse);
+}
