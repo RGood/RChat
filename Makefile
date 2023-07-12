@@ -1,6 +1,7 @@
 .PHONY: protos
 protos:
 	mkdir -p server/internal/generated
+	mkdir -p webclient/generated
 	protoc -I=protos --go_out=server/internal/generated --go_opt=paths=source_relative \
 		--go-grpc_out=server/internal/generated --go-grpc_opt=paths=source_relative \
 		--js_out=import_style=commonjs:./webclient/generated \
