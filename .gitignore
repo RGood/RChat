@@ -1,3 +1,7 @@
 nginx/ssl/*
 
 server/vendor
+
+# generated proto interface files
+internal/generated/*
+webclient/generated/*

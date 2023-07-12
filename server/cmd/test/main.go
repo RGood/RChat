@@ -39,10 +39,6 @@ func main() {
 		"token": signupRes.Token,
 	})
 
-	if err != nil {
-		panic(err)
-	}
-
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 
 	res, err := client.Whoami(ctx, &chat.WhoamiRequest{})
