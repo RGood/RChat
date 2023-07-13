@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/RGood/rchat/server/internal/common"
 	"github.com/RGood/rchat/server/internal/generated/chat"
+	"github.com/RGood/rchat/server/pkg/common"
 	"google.golang.org/grpc/metadata"
 )
 

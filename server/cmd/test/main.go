@@ -46,5 +46,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("%v\n", res)
+	fmt.Printf("User: %s\n", res.Name)
 }

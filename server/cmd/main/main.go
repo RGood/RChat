@@ -4,8 +4,8 @@ import (
 	"net"
 
 	"github.com/RGood/rchat/server/internal/generated/chat"
-	"github.com/RGood/rchat/server/internal/rchat"
-	userservice "github.com/RGood/rchat/server/internal/user_service"
+	"github.com/RGood/rchat/server/internal/userservice"
+	"github.com/RGood/rchat/server/pkg/rchat"
 	"google.golang.org/grpc"
 )
 

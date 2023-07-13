@@ -3,6 +3,7 @@ WORKDIR /srv
 
 COPY cmd cmd/
 COPY internal internal/
+COPY pkg pkg/
 
 COPY go.mod .
 COPY go.sum .
