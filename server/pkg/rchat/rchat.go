@@ -235,8 +235,9 @@ func (s *Server) Open(server chat.RChat_OpenServer) error {
 				server.Send(&chat.Event{
 					Event: &chat.Event_Error{
 						Error: &chat.ErrorResponse{
-							Target: e.Message.Author,
-							Event:  event,
+							Target:  e.Message.Author,
+							Event:   event,
+							Message: "could not find target",
 						},
 					},
 				})

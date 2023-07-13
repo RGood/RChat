@@ -15,6 +15,7 @@ message Message {
 message ErrorResponse {
   string target = 2;
   Event event = 3;
+  string message = 4;
 }
 
 message Event {

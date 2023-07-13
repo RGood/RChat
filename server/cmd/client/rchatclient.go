@@ -124,7 +124,7 @@ func main() {
 			case *chat.Event_Message:
 				fmt.Printf("===============================\nAuthor: %s\n%s\n", e.Message.Author, e.Message.Data)
 			case *chat.Event_Error:
-				fmt.Printf("===============================\nEvent failed:\n%v\n", e.Error.Event)
+				fmt.Printf("===============================\nEvent failed:\n%s\n%v\n", e.Error.Message, e.Error.Event)
 			}
 		}
 	}()
