@@ -25,6 +25,7 @@ services:
   server:
     depends_on:
       - db
+    restart: always
     build:
       context: ./server
       dockerfile: Dockerfile

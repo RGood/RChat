@@ -3,15 +3,24 @@ package rchat
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/RGood/rchat/server/internal/generated/chat"
 	"github.com/RGood/rchat/server/pkg/common"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
+
+type target interface {
+	Send(*chat.Event) error
+	Recv() (*chat.Event, error)
+}
 
 // Server is the server struct for the rchat package
 type Server struct {
@@ -20,8 +29,17 @@ type Server struct {
 	userService common.UserService
 
 	// This should be a map that points to a sync set
-	addressableEntity map[string]map[chat.RChat_OpenServer]struct{}
+	addressableEntity map[string]map[target]struct{}
 	sessions          map[string]string
+}
+
+// UpstreamServer is the config of our credentials to a remote service
+type UpstreamServer struct {
+	Username string
+	Password string
+
+	Address    string
+	TargetName string
 }
 
 func generateSecureToken(length int) string {
@@ -34,17 +52,79 @@ func generateSecureToken(length int) string {
 }
 
 // NewServer is the server constructor function
-func NewServer(userService common.UserService) chat.RChatServer {
-	return &Server{
+func NewServer(userService common.UserService, upstreams ...UpstreamServer) chat.RChatServer {
+	server := &Server{
 		userService:       userService,
-		addressableEntity: map[string]map[chat.RChat_OpenServer]struct{}{},
+		addressableEntity: map[string]map[target]struct{}{},
 		sessions:          map[string]string{},
 	}
+
+	for _, upstream := range upstreams {
+		if !validateUsername(upstream.TargetName) {
+			continue
+		}
+
+		targetName := strings.ToLower(upstream.TargetName)
+
+		server.addressableEntity[targetName] = map[target]struct{}{}
+
+		creds := credentials.NewTLS(&tls.Config{
+			InsecureSkipVerify: true,
+		})
+
+		conn, err := grpc.Dial(upstream.Address, grpc.WithTransportCredentials(creds))
+		if err != nil {
+			panic(err)
+		}
+
+		client := chat.NewRChatClient(conn)
+		res, err := client.Login(context.Background(), &chat.Credentials{
+			Username: upstream.Username,
+			Password: upstream.Password,
+		})
+
+		// If we can't log into the remote service, skip
+		if err != nil {
+			continue
+		}
+
+		ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(map[string]string{
+			"token": res.Token,
+		}))
+
+		upstreamClient, err := client.Open(ctx)
+		if err != nil {
+			continue
+		}
+
+		server.addressableEntity[targetName][upstreamClient] = struct{}{}
+	}
+
+	return server
+}
+
+// Define a global regular expression pattern
+var alphanumericRegex = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
+
+func isAlphanumeric(s string) bool {
+	return alphanumericRegex.MatchString(s)
+}
+
+func validateUsername(username string) bool {
+	return len(username) >= 3 && len(username) <= 32 && isAlphanumeric(username)
 }
 
 // Signup allows a new user to register for rchat
 func (s *Server) Signup(ctx context.Context, creds *chat.Credentials) (*chat.AuthResponse, error) {
 	// Attempt to create account
+	if !validateUsername(creds.Username) {
+		return nil, errors.New("invalid username")
+	}
+
+	if _, ok := s.addressableEntity[strings.ToLower(creds.Username)]; ok {
+		return nil, errors.New("entity name already exists")
+	}
+
 	err := s.userService.Create(creds.Username, creds.Password)
 	if err != nil {
 		return nil, err
@@ -116,7 +196,7 @@ func (s *Server) Open(server chat.RChat_OpenServer) error {
 	if targets, ok := s.addressableEntity[username]; ok {
 		targets[server] = struct{}{}
 	} else {
-		s.addressableEntity[username] = map[chat.RChat_OpenServer]struct{}{
+		s.addressableEntity[username] = map[target]struct{}{
 			server: {},
 		}
 	}
@@ -129,7 +209,7 @@ func (s *Server) Open(server chat.RChat_OpenServer) error {
 	}()
 
 	// Loop listening for messages from the server & forward them to the appropriate address or respond with an error
-	for event, err := server.Recv(); err != nil; event, err = server.Recv() {
+	for event, err := server.Recv(); err == nil; event, err = server.Recv() {
 		switch e := event.Event.(type) {
 		case *chat.Event_Message:
 			localTarget, newDest := deriveTargets(e.Message.Target)
